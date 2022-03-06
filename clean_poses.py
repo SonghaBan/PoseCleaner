@@ -4,27 +4,24 @@ Created on Tue Apr 13 15:03:55 2021
 
 @author: songhama
 """
-import json
-import moviepy.editor as mpy
-import scipy.io.wavfile as wav
+import json, os, glob
 from scipy import interpolate
-from visframe import make_frame, make_frame_clean, make_video_openpose
 from more_itertools.recipes import grouper
 import pandas as pd
-import glob, os
-import time
-import numpy as np
-from pydub import AudioSegment, effects  
-import multiprocessing as mp
+import argparse
+
+join = os.path.join
+cur_d = os.path.dirname(__file__)
 
 class DataCleaner:
     '''
     recover missing frames and incorrect detections
-    Inpput:
+    
+    Input:
         - filename: filename of the pose json. ex) PoseEstimation/output_fast/alphapose-results-fast-14_Trim.json
     '''
-    def __init__(self, filename, fps=30):
-        self.flabel = filename.split('-')[-1].split('.')[0]
+    def __init__(self, filename, out_folder):
+        self.flabel = filename.split('/')[-1].split('.')[0]
         with open(filename, 'r') as of:
             self.data = json.load(of)
         self.tcks = []
@@ -33,7 +30,7 @@ class DataCleaner:
         self.newdata = []
         self.missing= 0
         self.wrong = 0
-        self.fps = fps
+        self.out_folder = out_folder
         
     def filter_data(self):
         prev = None
@@ -131,19 +128,10 @@ class DataCleaner:
                 return
             
     def save(self):
-        
-        if self.fps!=30:
-            newdata = []
-            n = 30 // self.fps
-            for i,d in enumerate(self.newdata):
-                if i%n == 0:
-                    newdata.append(d)
-            self.newdata = newdata
-        
-        newfilename = f"data/fixed_pose/{self.flabel}.json"
+        newfilename = join(self.out_folder, f"{self.flabel}.json")
         with open(newfilename, 'w') as of:
             json.dump(self.newdata, of)
-        print("saved json")
+        print("saved output")
         
             
     def run(self):
@@ -155,17 +143,36 @@ class DataCleaner:
         self.fill_missing()
         print(f'done / {self.missing} missing frames, {self.wrong} misdetections fixed!')
         self.save()
-  
 
-def clean_all_files():
-    files = glob.glob('PoseEstimation/output_fast/*.json')
+def clean_all_files(args):
+    files = glob.glob(join(args.input_folder, '*.json'))
+    print(files)
+    return
     for filename in files:
-        make_skeleton_video(filename, org=True)
-        dc = DataCleaner(filename, fps=10)
+        dc = DataCleaner(filename, args.output_folder)
         dc.run()
 
-def main():
-    clean_all_files()
-    
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+            "-i",
+            "--input_folder",
+            required=True,
+            help="folder path of the input files. e.g. data/pose/",
+            type=str
+        )
+
+    parser.add_argument(
+            "-o",
+            "--output_folder",
+            default=join(cur_d, "fixed_poses"),
+            help="folder path of the output",
+            type=str
+        )
+
+    args = parser.parse_args()
+    return args
+
 if __name__ == '__main__':
-    clean_all_files()
+    clean_all_files(parse_args())
