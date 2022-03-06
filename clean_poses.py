@@ -63,13 +63,9 @@ class DataCleaner:
                 absdiff = max(diff.max()[:2].max(), -1* diff.min()[:2].min())
                 if absdiff > 50:
                     if prevwrong:
-                        prevwrong += 1
                         prev=pose
-                        continue
-                    else:
-                        self.wrong += 1
-                        prevwrong += 1
-                        continue
+                    prevwrong += 1
+                    continue
             
             self.x.append(frame_idx)
             y_idx = 0
