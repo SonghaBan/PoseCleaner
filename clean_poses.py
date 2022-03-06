@@ -64,6 +64,8 @@ class DataCleaner:
                 if absdiff > 50:
                     if prevwrong:
                         prev=pose
+                    else:
+                        self.wrong += 1
                     prevwrong += 1
                     continue
             
